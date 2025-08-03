@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Dashboard Multi-Página de Análise de Atrasos - iFood (com Aba de Correlação)
+Dashboard Multi-Página de Análise de Atrasos - iFood (Versão Final Corrigida)
 
 @author: rodrigo
 """
@@ -23,9 +23,14 @@ def carregar_dados():
     try:
         df = pd.read_csv('IfoodCase_tratado.csv')
         
-        # Conversões de tipo
-        df['hora_data_pedido'] = pd.to_datetime(df['hora_data_pedido'])
-        df['data_pedido'] = pd.to_datetime(df['data_pedido'])
+        # --- INÍCIO DA CORREÇÃO ---
+        # Adicionamos errors='coerce' para lidar com formatos de data inválidos
+        df['hora_data_pedido'] = pd.to_datetime(df['hora_data_pedido'], errors='coerce')
+        df['data_pedido'] = pd.to_datetime(df['data_pedido'], errors='coerce')
+        
+        # Removemos qualquer linha onde a data não pôde ser convertida (ficou NaT)
+        df.dropna(subset=['hora_data_pedido', 'data_pedido'], inplace=True)
+        # --- FIM DA CORREÇÃO ---
         
         # Colunas para cálculo de média (ignora zeros)
         df['atraso_pedido_min_real'] = df['atraso_pedido_min'].replace(0, np.nan)
@@ -93,6 +98,12 @@ def pagina_etapas_entrega(df_filtrado):
         fig_etapas = px.bar(etapas, x='modal', y=['tempo_ida_restaurante_min', 'tempo_preparo_real_min', 'tempo_percurso_entrega_min'],
                             title="Tempo Médio por Etapa (min)", text_auto='.2f')
         st.plotly_chart(fig_etapas, use_container_width=True)
+        
+        st.subheader("Taxa de Atraso do Entregador por Modal")
+        taxa_atraso_entregador = (df_filtrado.groupby('modal')['flag_atraso_entregador'].sum() / df_filtrado.groupby('modal')['numero_pedido'].count() * 100).round(2).reset_index(name='taxa_atraso')
+        fig_bar_entregador = px.bar(taxa_atraso_entregador, x='modal', y='taxa_atraso', text_auto=True)
+        fig_bar_entregador.update_layout(yaxis_title="Taxa de Atraso do Entregador (%)", xaxis_title="Modal")
+        st.plotly_chart(fig_bar_entregador, use_container_width=True)
 
 def pagina_performance_lojas(df_filtrado):
     st.title("🏢 Análise de Performance das Lojas")
@@ -135,6 +146,9 @@ def pagina_analise_outliers(df_filtrado):
         for col in colunas_pedido:
             fig = px.box(df_pedido_atrasado, y=col, title=f'Boxplot para Atraso Geral: {col}')
             st.plotly_chart(fig, use_container_width=True)
+        
+        fig_scatter_pedido = px.scatter(df_pedido_atrasado, x='distancia_restaurante_cliente_km', y='atraso_pedido_min', title='Dispersão: Distância vs. Atraso Total do Pedido')
+        st.plotly_chart(fig_scatter_pedido, use_container_width=True)
 
 def pagina_correlacao(df_filtrado):
     st.title("🔗 Análise de Correlação")
