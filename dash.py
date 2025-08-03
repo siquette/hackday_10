@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Dashboard Estratégico de Análise de Atrasos - iFood (Versão Final com Regressão)
+Dashboard Estratégico de Análise de Atrasos - iFood (Versão Final Corrigida)
 
 @author: rodrigo
 """
@@ -143,14 +143,23 @@ def pagina_visao_geral(df_filtrado):
             causas = df_filtrado[['flag_atraso_restaurante', 'flag_atraso_entregador']].sum().reset_index()
             causas.columns = ['Causa', 'Contagem']
             causas['Causa'] = causas['Causa'].replace({'flag_atraso_restaurante': 'Restaurante', 'flag_atraso_entregador': 'Entregador'})
-            fig_pie = px.pie(causas, names='Causa', values='Contagem', hole=0.4)
+            fig_pie = px.pie(causas, names='Causa', values='Contagem', hole=0.4, title="Ocorrências de Atraso por Fonte")
             st.plotly_chart(fig_pie, use_container_width=True)
         with col_chart2:
             st.subheader("Taxa de Atraso por Dia da Semana")
             taxa_atraso_dia = (df_filtrado.groupby('dia_semana')['flag_atraso_pedido'].sum() / df_filtrado.groupby('dia_semana')['numero_pedido'].count() * 100).round(2).reset_index(name='taxa_atraso')
-            fig_bar_dia = px.bar(taxa_atraso_dia, x='dia_semana', y='taxa_atraso', text_auto=True)
+            fig_bar_dia = px.bar(taxa_atraso_dia, x='dia_semana', y='taxa_atraso', text_auto=True, title="Taxa de Atraso (%) por Dia")
             fig_bar_dia.update_layout(yaxis_title="Taxa de Atraso (%)", xaxis_title="")
             st.plotly_chart(fig_bar_dia, use_container_width=True)
+        
+        # --- GRÁFICO DE MODAL CORRIGIDO E ADICIONADO AQUI ---
+        st.markdown("---")
+        st.subheader("Performance por Modal de Entrega")
+        taxa_atraso_modal = (df_filtrado.groupby('modal')['flag_atraso_pedido'].sum() / df_filtrado.groupby('modal')['numero_pedido'].count() * 100).round(2).reset_index(name='taxa_atraso')
+        fig_modal = px.bar(taxa_atraso_modal, x='modal', y='taxa_atraso', text_auto=True, 
+                           color='modal', title="Taxa de Atraso (%) por Modal")
+        fig_modal.update_layout(yaxis_title="Taxa de Atraso (%)", xaxis_title="Modal")
+        st.plotly_chart(fig_modal, use_container_width=True)
 
 def pagina_analise_temporal(df_filtrado):
     st.title("📈 Análise Temporal (Tendências)")
